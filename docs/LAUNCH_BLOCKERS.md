@@ -18,7 +18,7 @@
 3. **Firebase production** — `REACT_APP_FIREBASE_CONFIG` + disable `DEV_AUTH_ENABLED`.
 4. **App Store Connect** — create IAP products matching env IDs; RevenueCat keys in backend.
 5. **E2E QA** — run `docs/CONSENT_E2E_QA.md` on staging with real email.
-6. **Emergent sync** — `docs/G1-G20-SYNC-PENDING.md` still awaiting user “ok” before treating as final.
+6. ~~**Emergent sync**~~ — ✅ approved 2026-07-06 (`docs/G1-G20-SYNC-PENDING.md`)
 
 ## What you can honestly market after lawyer + Resend + store submit
 

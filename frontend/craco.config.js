@@ -28,6 +28,7 @@ let webpackConfig = {
       extends: ["plugin:react-hooks/recommended"],
       rules: {
         "react-hooks/rules-of-hooks": "error",
+        // Warnings fail Render/Vercel builds when CI=true; keep as warn locally.
         "react-hooks/exhaustive-deps": "warn",
       },
     },
@@ -35,6 +36,10 @@ let webpackConfig = {
   webpack: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+      // RevenueCat is native-only; web/Render builds use stub unless NATIVE_IAP_BUILD=true
+      ...(process.env.NATIVE_IAP_BUILD !== 'true' ? {
+        '@revenuecat/purchases-capacitor': path.resolve(__dirname, 'src/lib/iap-capacitor-stub.js'),
+      } : {}),
     },
     configure: (webpackConfig) => {
 

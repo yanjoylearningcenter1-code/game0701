@@ -1,6 +1,8 @@
 # G1–G20 sync — PENDING user approval (2026-07-05)
 
-**Status:** Emergent iteration-6 bundle merged into local app for preview. **Do not treat as final** until user says "ok".
+**Status:** ✅ **Approved by user (2026-07-06).** Emergent iteration-6 bundle is final for launch prep.
+
+Backup retained at `_backup/pre-emergent-sync-2026-07-05/` until you choose to delete it.
 
 ## Rollback
 
