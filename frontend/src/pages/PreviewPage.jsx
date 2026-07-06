@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +7,6 @@ import { Particles } from "@/lib/design";
 import { sfx } from "@/lib/audio";
 import { looksGarbled } from "@/lib/ocr";
 import { toast } from "sonner";
-import api from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 
 const STRUCTURES = [
@@ -22,15 +21,10 @@ export default function PreviewPage() {
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
   const [garbled, setGarbled] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [concepts, setConcepts] = useState([]);
-  const [languageSplit, setLanguageSplit] = useState(null);
-  const [analysisSource, setAnalysisSource] = useState(null);
   const [segmenting, setSegmenting] = useState(false);
   const [segmentCount, setSegmentCount] = useState(null);
   const [contentStructure, setContentStructure] = useState(null);
   const [splitHint, setSplitHint] = useState(false);
-  const analyzeTimer = useRef(null);
 
   const isManualText = sessionStorage.getItem("text_source") === "manual";
 
@@ -53,34 +47,6 @@ export default function PreviewPage() {
       setSplitHint(false);
     }
   }, [text, contentStructure, segmenting]);
-
-  useEffect(() => {
-    if (analyzeTimer.current) clearTimeout(analyzeTimer.current);
-    const trimmed = text.trim();
-    if (trimmed.length < 20) {
-      setConcepts([]);
-      setLanguageSplit(null);
-      return;
-    }
-    analyzeTimer.current = setTimeout(async () => {
-      setAnalyzing(true);
-      try {
-        const trackType = sessionStorage.getItem("mode") || "quiz";
-        const { data } = await api.post("/materials/analyze-key-concepts", {
-          text: trimmed,
-          track_type: trackType,
-        });
-        setConcepts(data.key_concepts || []);
-        setLanguageSplit(data.language_split || null);
-        setAnalysisSource(data.source || null);
-      } catch {
-        setConcepts([]);
-      } finally {
-        setAnalyzing(false);
-      }
-    }, 900);
-    return () => { if (analyzeTimer.current) clearTimeout(analyzeTimer.current); };
-  }, [text]);
 
   const assignFlow = sessionStorage.getItem("assign_flow");
 
@@ -119,11 +85,6 @@ export default function PreviewPage() {
     sessionStorage.setItem("ocr_text", trimmed);
     sessionStorage.setItem("material_title", title || "Adventure");
     if (contentStructure) sessionStorage.setItem("content_structure", contentStructure);
-    if (concepts.length) {
-      sessionStorage.setItem("key_concepts_preview", JSON.stringify(concepts));
-    } else {
-      sessionStorage.removeItem("key_concepts_preview");
-    }
     navigate("/mode");
   };
 
@@ -204,43 +165,6 @@ export default function PreviewPage() {
             <p className="text-xs text-indigo-200/70 mt-2">{t("preview_segment_done", { count: segmentCount })}</p>
           )}
         </div>
-
-        {text.trim().length >= 20 && (
-          <div className="mt-6 rounded-3xl bg-indigo-500/10 border border-indigo-400/30 p-5" data-testid="key-concepts-panel">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <h2 className="font-display text-lg font-bold">🔑 {t("preview_key_concepts")}</h2>
-              {analyzing && <span className="text-xs text-indigo-200/80 animate-pulse">{t("preview_analyzing")}</span>}
-              {!analyzing && analysisSource && (
-                <span className="text-xs text-indigo-200/60">{analysisSource === "gemini" ? "AI" : "Quick scan"}</span>
-              )}
-            </div>
-            {languageSplit?.mixed && (
-              <p className="text-xs text-sky-200/80 mb-3">
-                {t("preview_mixed_lang", { zh: languageSplit.zh_count, en: languageSplit.en_count })}
-              </p>
-            )}
-            {!analyzing && concepts.length === 0 && text.trim().length >= 20 && (
-              <p className="text-sm text-white/60">{t("preview_no_concepts")}</p>
-            )}
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {concepts.slice(0, 12).map((c) => (
-                <div key={c.concept_id} className="rounded-2xl bg-black/30 border border-white/10 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="font-bold text-amber-200 truncate">{c.exact_term}</div>
-                      {c.simplified_explanation && (
-                        <div className="text-xs text-white/70 mt-1 line-clamp-2">{c.simplified_explanation}</div>
-                      )}
-                    </div>
-                    <span className="shrink-0 text-xs rounded-lg bg-white/10 px-2 py-1">
-                      {c.presentation_emoji || "🎮"} {c.language?.toUpperCase() || "?"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         <Button
           data-testid="continue-mode-btn"

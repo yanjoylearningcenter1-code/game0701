@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game_library import build_challenge, pick_game_for_step, filter_game_options, detect_language
+from game_library import build_challenge, pick_game_for_step, filter_game_options, detect_language, is_short_recital_passage
 from journey_engine import READING_DICTATION_STEPS, generate_step_game, challenge_for_step
 
 
@@ -85,13 +85,63 @@ def test_generate_step_game_includes_games_used():
 
 def test_recitation_steps_have_multiple_options():
     from journey_engine import RECITATION_DICTATION_STEPS, generate_step_game
-    assert RECITATION_DICTATION_STEPS[1]["game_options"] == ["READ"]
+    assert "READ" in RECITATION_DICTATION_STEPS[1]["game_options"]
+    assert RECITATION_DICTATION_STEPS[1].get("preserve_unit_order") is True
     assert RECITATION_DICTATION_STEPS[7]["lock_hours"] == 24
-    units = [{"term": "The quick brown fox.", "unit_id": "u1", "language": "en", "unit_type": "sentence"}]
+    assert RECITATION_DICTATION_STEPS[2].get("length_banded") is True
+    units = [
+        {"term": "The quick brown fox.", "unit_id": "u1", "language": "en", "unit_type": "sentence", "meaning": "A fast animal"},
+        {"term": "It jumps over the lazy dog.", "unit_id": "u2", "language": "en", "unit_type": "sentence", "meaning": "It leaps"},
+    ]
     step1 = generate_step_game(units, 1, "Recital", track_type="recital_dictation")
     assert step1["challenges"][0]["type"] == "passage_study"
+    assert step1["challenges"][0].get("story_intro")
+    assert len(step1["challenges"]) >= 3
+    step2 = generate_step_game(units, 2, "Recital", track_type="recital_dictation")
+    assert step2["short_recital_passage"] is True
+    types = {c.get("game_type") for c in step2["challenges"]}
+    assert types & {"G16", "G18", "G1"}
+    assert types & {"HL", "G2", "G3"}
     game = generate_step_game(units, 10, "Recital", track_type="recital_dictation")
     assert game["challenges"][0]["type"] == "full_recall"
+
+
+def test_recital_short_vs_long_by_content_length():
+    from journey_engine import generate_step_game
+    short_units = [
+        {"term": "今天天氣很好。", "unit_id": "z1", "language": "zh", "unit_type": "sentence", "meaning": "好天"},
+        {"term": "我們去公園玩。", "unit_id": "z2", "language": "zh", "unit_type": "sentence", "meaning": "玩"},
+    ]
+    assert is_short_recital_passage(short_units) is True
+    short_step4 = generate_step_game(short_units, 4, "Recital", track_type="recital_dictation")
+    assert len(short_step4["challenges"]) >= len(short_units)
+
+    long_units = [
+        {
+            "term": f"這是第{i}句測試內容，用來模擬較長的背默篇章。",
+            "unit_id": f"L{i}",
+            "language": "zh",
+            "unit_type": "sentence",
+            "meaning": "測",
+        }
+        for i in range(12)
+    ]
+    assert is_short_recital_passage(long_units) is False
+    long_step2 = generate_step_game(long_units, 2, "Recital", track_type="recital_dictation")
+    assert len(long_step2["challenges"]) >= round(len(long_units) * 1.5)
+    assert all(c.get("game_type") in ("HL", "G2", "G3") for c in long_step2["challenges"][:12])
+    long_step4 = generate_step_game(long_units, 4, "Recital", track_type="recital_dictation")
+    assert len(long_step4["challenges"]) >= 6
+
+
+def test_recital_expands_1_5x_per_bundle():
+    from journey_engine import generate_step_game
+    units = [
+        {"term": f"Sentence number {i}.", "unit_id": f"s{i}", "language": "en", "unit_type": "sentence", "meaning": "m"}
+        for i in range(4)
+    ]
+    step3 = generate_step_game(units, 3, "Recital", track_type="recital_dictation")
+    assert len(step3["challenges"]) >= round(len(units) * 1.5)
 
 
 def test_quiz_and_exam_journeys():

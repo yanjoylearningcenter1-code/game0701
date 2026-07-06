@@ -12,7 +12,12 @@ from game_library import (
     build_full_recall_challenge,
     build_paragraph_recall_challenge,
     build_passage_study_challenge,
+    build_recital_step1_challenges,
+    build_recital_step2_challenges,
+    build_recital_step3_challenges,
+    build_recital_step4_challenges,
     detect_language,
+    is_short_recital_passage,
     pick_game_for_step,
 )
 
@@ -30,10 +35,23 @@ READING_DICTATION_STEPS: Dict[int, dict] = {
 }
 
 RECITATION_DICTATION_STEPS: Dict[int, dict] = {
-    1: {"name": "Read & Understand", "name_zh": "閱讀理解", "game_options": ["READ"], "profile": "L", "pass_pct": 60, "lock_hours": 0, "continuous": True, "passage_study": True},
-    2: {"name": "Highlight Keyword", "name_zh": "標記關鍵字", "game_options": ["HL", "G2"], "profile": "L", "pass_pct": 70, "lock_hours": 0, "continuous": True},
-    3: {"name": "Missing Word", "name_zh": "填空缺字", "game_options": ["G5", "G13", "G18"], "profile": "L", "pass_pct": 75, "lock_hours": 0, "continuous": True},
-    4: {"name": "Sentence Ordering", "name_zh": "句子重組", "game_options": ["G6"], "profile": "L", "pass_pct": 75, "lock_hours": 0, "continuous": True},
+    1: {"name": "Story & Shadow", "name_zh": "講故事跟讀", "game_options": ["READ", "G3", "G2", "G6"], "profile": "L", "pass_pct": 60, "lock_hours": 0, "continuous": True, "passage_study": True, "preserve_unit_order": True},
+    2: {
+        "name": "Line by Line", "name_zh": "逐句理解", "name_zh_short": "逐字＋逐句",
+        "game_options": ["HL", "G2", "G3"], "game_options_short": ["G16", "G18", "G1"],
+        "profile": "L", "pass_pct": 70, "lock_hours": 0, "continuous": True,
+        "preserve_unit_order": True, "passage_reference": True, "length_banded": True,
+    },
+    3: {
+        "name": "Line Cloze", "name_zh": "逐句填空", "game_options": ["G5", "G13", "G18"],
+        "profile": "L", "pass_pct": 75, "lock_hours": 0, "continuous": True,
+        "preserve_unit_order": True, "passage_reference": True, "length_banded": True,
+    },
+    4: {
+        "name": "Sentence Groups", "name_zh": "逐組重組", "name_zh_short": "逐句重組",
+        "game_options": ["G6"], "profile": "L", "pass_pct": 75, "lock_hours": 0, "continuous": True,
+        "preserve_unit_order": True, "sentence_group_mode": True, "passage_reference": True, "length_banded": True,
+    },
     5: {"name": "Sentence Recall", "name_zh": "單句默寫", "game_options": ["G9"], "profile": "R", "pass_pct": 80, "lock_hours": 0, "continuous": True, "listen_mode": "sentence"},
     6: {"name": "Paragraph Recall", "name_zh": "段落默寫", "game_options": ["G9"], "profile": "R", "pass_pct": 80, "lock_hours": 0, "continuous": True, "paragraph_mode": True},
     7: {"name": "Delayed Recall ①", "name_zh": "延遲回想①", "game_options": ["G9"], "profile": "R", "pass_pct": 85, "lock_hours": 24, "continuous": False, "peek_disabled": True},
@@ -138,10 +156,10 @@ STEP_THEME_META: Dict[str, Dict[int, dict]] = {
         10: {"theme_id": "finale", "tagline_zh": "決賽閘 — 全部詞語，一次過", "tagline_en": "Final gate — all words once"},
     },
     "recital_dictation": {
-        1: {"theme_id": "scroll", "tagline_zh": "閱讀理解，進入故事", "tagline_en": "Read and understand"},
-        2: {"theme_id": "library", "tagline_zh": "標記關鍵字", "tagline_en": "Highlight keywords"},
-        3: {"theme_id": "forge", "tagline_zh": "填補空缺", "tagline_en": "Fill the gaps"},
-        4: {"theme_id": "forge", "tagline_zh": "句子重組", "tagline_en": "Reorder sentences"},
+        1: {"theme_id": "scroll", "tagline_zh": "講故事、跟讀、逐句玩", "tagline_en": "Story, shadowing, play line by line"},
+        2: {"theme_id": "library", "tagline_zh": "逐句 — 原文仍可见", "tagline_en": "Line by line — passage visible"},
+        3: {"theme_id": "forge", "tagline_zh": "逐句填空", "tagline_en": "Cloze each line in order"},
+        4: {"theme_id": "forge", "tagline_zh": "逐組句子重組", "tagline_en": "Reorder sentence pairs"},
         5: {"theme_id": "echo", "tagline_zh": "單句默寫", "tagline_en": "Sentence recall"},
         6: {"theme_id": "echo", "tagline_zh": "段落默寫", "tagline_en": "Paragraph recall"},
         7: {"theme_id": "bonus", "tagline_zh": "延遲回想 ①", "tagline_en": "Delayed recall I"},
@@ -342,19 +360,50 @@ def generate_step_game(
     options = cfg.get("game_options") or ["G3"]
     profile = cfg.get("profile", step_profile(step, track_type))
     max_step = max_step_for_track(track_type)
+    short_recital = track_type == "recital_dictation" and is_short_recital_passage(units)
 
     force_game = session_game_id
     if not force_game and len(options) == 1 and options[0] not in ("DIAG",):
         force_game = options[0]
 
-    unit_list = weak_units_first(units) if cfg.get("prefer_weak") else units
+    unit_list = weak_units_first(units) if cfg.get("prefer_weak") else list(units)
     if cfg.get("cross_topic"):
         unit_list = _shuffle(list(units))
+    if cfg.get("preserve_unit_order"):
+        unit_list = [u for u in units if u.get("term")]
+
+    full_passage_ref = "\n".join(u.get("term", "") for u in units if u.get("term"))
 
     if track_type == "recital_dictation" and step == 10 and cfg.get("full_passage"):
         challenges = [build_full_recall_challenge(units, step, profile)]
     elif track_type == "recital_dictation" and step == 1 and cfg.get("passage_study"):
-        challenges = [build_passage_study_challenge(units, step, profile)]
+        challenges = build_recital_step1_challenges(units, step, profile)
+    elif track_type == "recital_dictation" and step == 2 and cfg.get("length_banded"):
+        challenges = build_recital_step2_challenges(
+            units, step, profile, short_passage=short_recital,
+            performance=performance, full_passage_ref=full_passage_ref,
+        )
+    elif track_type == "recital_dictation" and step == 3 and cfg.get("length_banded"):
+        challenges = build_recital_step3_challenges(
+            units, step, profile, full_passage_ref=full_passage_ref,
+        )
+    elif track_type == "recital_dictation" and step == 4 and cfg.get("length_banded"):
+        challenges = build_recital_step4_challenges(
+            units, step, profile, short_passage=short_recital, full_passage_ref=full_passage_ref,
+        )
+    elif track_type == "recital_dictation" and step == 4 and cfg.get("sentence_group_mode"):
+        challenges = []
+        ordered = [u for u in units if u.get("term")]
+        for i in range(0, len(ordered), 2):
+            group = ordered[i : i + 2]
+            chunk = " ".join(u.get("term", "") for u in group)
+            if detect_language(chunk) == "zh":
+                chunk = "".join(u.get("term", "") for u in group)
+            fake = {"term": chunk, "unit_id": group[0].get("unit_id"), "unit_type": "sentence", "language": group[0].get("language")}
+            c = build_challenge("G6", fake, units, step=step, profile=profile)
+            if cfg.get("passage_reference"):
+                c["passage_visible"] = full_passage_ref
+            challenges.append(c)
     elif track_type == "recital_dictation" and step == 6 and cfg.get("paragraph_mode"):
         # One sentence at a time — avoid 40-word non-stop audio dump
         challenges = []
@@ -387,15 +436,20 @@ def generate_step_game(
             for u in weak_only
         ]
     else:
-        challenges = [
-            challenge_for_step(u, step, units, track_type=track_type, game_id=force_game, performance=performance)
-            for u in unit_list
-        ]
+        challenges = []
+        for u in unit_list:
+            c = challenge_for_step(u, step, units, track_type=track_type, game_id=force_game, performance=performance)
+            if cfg.get("passage_reference") and full_passage_ref:
+                c["passage_visible"] = full_passage_ref
+            challenges.append(c)
 
     shuffle_steps = {7, 10, 11}
     if track_type == "quiz":
         shuffle_steps.add(11)
-    if not cfg.get("single_pass"):
+    if cfg.get("preserve_unit_order"):
+        if track_type == "recital_dictation" and len(challenges) >= 2 and not cfg.get("single_pass"):
+            challenges = expand_step_questions(challenges, factor=JOURNEY_QUESTION_MULTIPLIER)
+    elif not cfg.get("single_pass"):
         if step in shuffle_steps and len(challenges) > 1:
             random.shuffle(challenges)
         if cfg.get("final_sample") and len(challenges) > 1:
@@ -407,9 +461,9 @@ def generate_step_game(
             challenges = expand_step_questions(challenges, factor=2.0)
         elif track_type == "reading_dictation" and step in (1, 2):
             challenges = shrink_step_questions(challenges, factor=0.9)
-        else:
+        elif not cfg.get("preserve_unit_order"):
             challenges = expand_step_questions(challenges)
-    elif len(challenges) > 1:
+    elif len(challenges) > 1 and not cfg.get("preserve_unit_order"):
         random.shuffle(challenges)
 
     games_used = sorted({c.get("game_type") for c in challenges})
@@ -444,6 +498,8 @@ def generate_step_game(
         pass_label = f"Suggested ≥{cfg['pass_pct']}% (optional)"
 
     intro = f"Step {step}/{max_step} · {cfg['name_zh']} · {pass_label}"
+    if track_type == "recital_dictation" and cfg.get("length_banded") and short_recital and step in (2, 4):
+        intro = f"Step {step}/{max_step} · {cfg.get('name_zh_short', cfg['name_zh'])} · {pass_label}"
     if cfg.get("timed_mission"):
         intro = f"⏱ 限時任務 · {cfg['name_zh']} · {pass_label}"
     if cfg.get("optional"):
@@ -466,6 +522,7 @@ def generate_step_game(
         "games_used": games_used,
         "games_used_labels": game_labels,
         "track_type": track_type,
+        "short_recital_passage": short_recital if track_type == "recital_dictation" else None,
         "timed_mission": cfg.get("timed_mission", False),
         "optional_step": cfg.get("optional", False),
         "single_pass": bool(cfg.get("single_pass")),

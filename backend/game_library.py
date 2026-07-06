@@ -36,6 +36,63 @@ GAME_LABELS: Dict[str, dict] = {
 # English game id → Chinese variant for spelling steps
 ZH_VARIANT_MAP = {"G4": "G4-zh", "G6": "G6-zh", "G20": "G20-zh"}
 
+# Short 背默 ≈ ~10 sentences; longer bundles use paragraph-style steps 2–4.
+SHORT_RECITAL_MAX_SENTENCES = 10
+SHORT_RECITAL_MAX_TOTAL_CHARS = 420
+
+
+def is_short_recital_passage(units: List[dict]) -> bool:
+    """Infer short sentence-list vs long paragraph from OCR units — no grade/profile needed."""
+    ordered = [u for u in units if (u.get("term") or "").strip()]
+    if not ordered:
+        return True
+    n = len(ordered)
+    total = sum(len(u.get("term", "")) for u in ordered)
+    if n > SHORT_RECITAL_MAX_SENTENCES:
+        return False
+    if total > SHORT_RECITAL_MAX_TOTAL_CHARS:
+        return False
+    # Few very long blocks → treat as paragraph even if ≤10 lines
+    if n <= 4 and total / n > 55:
+        return False
+    return True
+
+
+def expand_to_char_word_units(sentence_unit: dict) -> List[dict]:
+    """P1–P3 step 2: expand a sentence into character (zh) or word (en) units."""
+    term = sentence_unit.get("term", "")
+    lang = sentence_unit.get("language") or detect_language(term)
+    uid_base = sentence_unit.get("unit_id", "u")
+    meaning = sentence_unit.get("meaning") or sentence_unit.get("definition") or ""
+    if lang == "zh":
+        chars = [
+            c for c in term
+            if c.strip() and c not in "，。！？、；：""''（）【】《》…"
+        ]
+        return [
+            {
+                "term": c,
+                "unit_id": f"{uid_base}_c{i}",
+                "unit_type": "word",
+                "language": "zh",
+                "parent_sentence": term,
+                "meaning": meaning,
+            }
+            for i, c in enumerate(chars)
+        ]
+    words = [w.strip(".,!?;:\"'") for w in re.split(r"\s+", term.strip()) if w.strip()]
+    return [
+        {
+            "term": w,
+            "unit_id": f"{uid_base}_w{i}",
+            "unit_type": "word",
+            "language": "en",
+            "parent_sentence": term,
+            "meaning": meaning,
+        }
+        for i, w in enumerate(words)
+    ]
+
 
 def detect_language(term: str) -> str:
     if re.search(r"[\u4e00-\u9fff]", term or ""):
@@ -729,18 +786,171 @@ def build_passage_study_challenge(units: List[dict], step: int, profile: str = "
         chunks.append("\n".join(buf))
     passage = "\n".join(sentences)
     uids = [u.get("unit_id") for u in units if u.get("unit_id")]
+    meanings = [u.get("definition") or u.get("meaning") or "" for u in units if u.get("term")]
+    if lang == "zh":
+        story_intro = _("📖 呢段大致講：", "📖 This bit is basically about: ", lang)
+        if meanings and meanings[0]:
+            story_intro += meanings[0][:120]
+        else:
+            story_intro += _("跟住大聲讀出嚟，像講故仔咁 — 唔使急住背！", "Read it out loud like a story — no need to memorize yet!", lang)
+    else:
+        story_intro = _("📖 Story time: ", "📖 Story time: ", lang)
+        story_intro += (meanings[0][:120] if meanings and meanings[0] else _("read along and have fun!", "read along and have fun!", lang))
     return {
         "unit_id": uids[0] if uids else "",
         "game_type": "READ",
         "step": step,
         "audio_profile": profile,
         "type": "passage_study",
-        "prompt": _("📖 順序閱讀全文（分段）", "📖 Read the passage in order (chunk by chunk)", lang),
+        "prompt": _("📖 順序閱讀全文（分段跟讀）", "📖 Read the passage in order (shadow each chunk)", lang),
+        "story_intro": story_intro,
         "passage": passage,
         "chunks": chunks or [passage],
         "answer": "ack",
         "auto_pass": True,
+        "shadowing": True,
+        "passage_visible": True,
     }
+
+
+def build_recital_step1_challenges(units: List[dict], step: int, profile: str = "L") -> List[dict]:
+    """背默 Step 1 — story intro + shadow read + tap per line + occasional reorder (OCR order)."""
+    ordered = [u for u in units if u.get("term")]
+    if not ordered:
+        return [build_passage_study_challenge(units, step, profile)]
+    passage = "\n".join(u.get("term", "") for u in ordered)
+    challenges: List[dict] = [build_passage_study_challenge(ordered, step, profile)]
+    for i, u in enumerate(ordered):
+        gid = "G3" if i % 2 == 0 else "G2"
+        c = build_challenge(gid, u, ordered, step=step, profile=profile)
+        c["passage_visible"] = passage
+        lang = detect_language(u.get("term", ""))
+        if gid == "G3":
+            c["prompt"] = _("🎯 一觸即中 — 揀啱呢句意思", "🎯 Tap attack — pick this line's meaning", lang)
+        else:
+            c["prompt"] = _("🎯 配對呢句嘅意思", "🎯 Match this line's meaning", lang)
+        challenges.append(c)
+    ps = challenges[0]
+    g6_added = 0
+    g6_cap = max(1, len(ordered) // 4)
+    for ci, chunk in enumerate(ps.get("chunks") or [passage]):
+        lines = [ln.strip() for ln in chunk.split("\n") if ln.strip()]
+        if len(lines) < 2:
+            continue
+        if ci % 3 != 1 or g6_added >= g6_cap:
+            continue
+        chunk_text = " ".join(lines) if detect_language(chunk) == "en" else "".join(lines)
+        fake = {
+            "term": chunk_text,
+            "unit_id": ordered[0].get("unit_id"),
+            "unit_type": "sentence",
+            "language": ordered[0].get("language"),
+        }
+        c = build_challenge("G6", fake, ordered, step=step, profile=profile)
+        c["passage_visible"] = passage
+        c["prompt"] = _("🧩 睇住原文，砌返啱嘅順序", "🧩 With the passage visible — put lines in order", detect_language(chunk_text))
+        challenges.append(c)
+        g6_added += 1
+    return challenges
+
+
+def build_recital_step2_challenges(
+    units: List[dict],
+    step: int,
+    profile: str,
+    *,
+    short_passage: bool = False,
+    performance: Optional[Dict[str, dict]] = None,
+    full_passage_ref: str = "",
+) -> List[dict]:
+    """Step 2 — short content: 逐字 then 逐句; long content: 逐句 HL/G2/G3 (passage visible)."""
+    ordered = [u for u in units if u.get("term")]
+    challenges: List[dict] = []
+    sentence_options = ["HL", "G2", "G3"]
+    if short_passage:
+        char_games = ["G16", "G18", "G1"]
+        gi = 0
+        for u in ordered:
+            for cu in expand_to_char_word_units(u):
+                gid = char_games[gi % len(char_games)]
+                gi += 1
+                c = build_challenge(gid, cu, ordered, step=step, profile=profile)
+                c["passage_visible"] = full_passage_ref or u.get("term", "")
+                lang = detect_language(cu.get("term", ""))
+                c["prompt"] = _("🔤 逐字認識", "🔤 Learn each character/word", lang)
+                challenges.append(c)
+    for u in ordered:
+        gid = pick_game_for_step(
+            sentence_options, u, performance, step=step, track_type="recital_dictation",
+        )
+        c = build_challenge(gid, u, ordered, step=step, profile=profile)
+        if full_passage_ref:
+            c["passage_visible"] = full_passage_ref
+        lang = detect_language(u.get("term", ""))
+        c["prompt"] = _("📖 逐句理解 — 原文仍可见", "📖 Line by line — passage still visible", lang)
+        challenges.append(c)
+    return challenges
+
+
+def build_recital_step3_challenges(
+    units: List[dict],
+    step: int,
+    profile: str,
+    *,
+    full_passage_ref: str = "",
+) -> List[dict]:
+    """Step 3 — 逐句 cloze (G5 → G13 → G18 per sentence, OCR order)."""
+    ordered = [u for u in units if u.get("term")]
+    games = ["G5", "G13", "G18"]
+    challenges: List[dict] = []
+    for i, u in enumerate(ordered):
+        u2 = dict(u)
+        if not u2.get("context"):
+            u2["context"] = u2.get("term", "")
+        gid = games[i % len(games)]
+        c = build_challenge(gid, u2, ordered, step=step, profile=profile)
+        if full_passage_ref:
+            c["passage_visible"] = full_passage_ref
+        challenges.append(c)
+    return challenges
+
+
+def build_recital_step4_challenges(
+    units: List[dict],
+    step: int,
+    profile: str,
+    *,
+    short_passage: bool = False,
+    full_passage_ref: str = "",
+) -> List[dict]:
+    """Step 4 — short: single-sentence G6; long: adjacent sentence-pair G6."""
+    ordered = [u for u in units if u.get("term")]
+    challenges: List[dict] = []
+    if short_passage:
+        for u in ordered:
+            c = build_challenge("G6", u, ordered, step=step, profile=profile)
+            if full_passage_ref:
+                c["passage_visible"] = full_passage_ref
+            lang = detect_language(u.get("term", ""))
+            c["prompt"] = _("🧩 砌返呢一句", "🧩 Put this sentence in order", lang)
+            challenges.append(c)
+        return challenges
+    for i in range(0, len(ordered), 2):
+        group = ordered[i : i + 2]
+        chunk = " ".join(u.get("term", "") for u in group)
+        if detect_language(chunk) == "zh":
+            chunk = "".join(u.get("term", "") for u in group)
+        fake = {
+            "term": chunk,
+            "unit_id": group[0].get("unit_id"),
+            "unit_type": "sentence",
+            "language": group[0].get("language"),
+        }
+        c = build_challenge("G6", fake, ordered, step=step, profile=profile)
+        if full_passage_ref:
+            c["passage_visible"] = full_passage_ref
+        challenges.append(c)
+    return challenges
 
 
 def build_full_recall_challenge(units: List[dict], step: int, profile: str = "E") -> dict:

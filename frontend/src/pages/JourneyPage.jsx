@@ -8,6 +8,8 @@ import { KidPageShell } from "@/components/KidBottomNav";
 import { sfx } from "@/lib/audio";
 import { toast } from "sonner";
 import { getStepTheme } from "@/lib/stepThemes";
+import { useLang } from "@/lib/i18n";
+import { canCollectLearningData, fetchDataConsent, showNoSaveProgressToast } from "@/lib/consentNotice";
 
 const JOURNEY_TITLES = {
   reading_dictation: { emoji: "📖", label: "讀默 Journey" },
@@ -156,6 +158,7 @@ function JourneyRoad({ steps, statusOf, locked, onPlay, gameEmoji }) {
 export default function JourneyPage() {
   const { trackId } = useParams();
   const navigate = useNavigate();
+  const { t } = useLang();
   const [journey, setJourney] = useState(null);
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -186,9 +189,13 @@ export default function JourneyPage() {
     sfx.click();
     setStarting(true);
     try {
+      const playStep = stepNum ?? current;
+      const consent = await fetchDataConsent();
+      if (!canCollectLearningData(consent) && playStep % 2 === 1) {
+        showNoSaveProgressToast(t, playStep);
+      }
       sessionStorage.setItem("track_id", trackId);
       sessionStorage.setItem("mode", track?.track_type || journey?.track_type || "reading_dictation");
-      const playStep = stepNum ?? current;
       const r = await api.post(`/tracks/${trackId}/step-battle?step=${playStep}`);
       sessionStorage.setItem("game", JSON.stringify(r.data.game));
       sessionStorage.setItem("game_unit_ids", JSON.stringify(r.data.unit_ids || []));

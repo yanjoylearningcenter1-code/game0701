@@ -28,7 +28,9 @@ import SentenceMakingGame from "@/components/games/SentenceMakingGame";
 import FullRecallGame from "@/components/games/FullRecallGame";
 import { saveProgressSnapshot, loadProgressSnapshot, clearProgressSnapshot } from "@/lib/progressSnapshot";
 import { useLang } from "@/lib/i18n";
-import { isConsentRequiredError, consentToastMessage } from "@/lib/consentErrors";
+import { isConsentRequiredError } from "@/lib/consentErrors";
+import { canCollectLearningData, fetchDataConsent, showNoSaveProgressToast } from "@/lib/consentNotice";
+import { toast } from "sonner";
 import { themeForJourneyGame } from "@/lib/stepThemes";
 import { getDiamonds, addDiamonds, spendDiamonds } from "@/lib/diamonds";
 import StreakSaveModal from "@/components/StreakSaveModal";
@@ -99,6 +101,7 @@ export default function BattlePage({ raidRoomCode = null }) {
   const [listenMode, setListenModeState] = useState(() => getListenMode());
   const [hyperBurst, setHyperBurst] = useState(false);
   const prevComboRef = useRef(0);
+  const consentToastShownRef = useRef(false);
 
   useEffect(() => {
     api.get("/student-preferences").then((r) => {
@@ -191,6 +194,19 @@ export default function BattlePage({ raidRoomCode = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
+  useEffect(() => {
+    if (!game || consentToastShownRef.current) return;
+    const journeyStep = parseInt(sessionStorage.getItem("journey_step") || "0", 10);
+    if (!journeyStep || journeyStep % 2 !== 1) return;
+    (async () => {
+      const consent = await fetchDataConsent();
+      if (!canCollectLearningData(consent)) {
+        consentToastShownRef.current = true;
+        showNoSaveProgressToast(t, journeyStep);
+      }
+    })();
+  }, [game, t]);
+
   const resumeFromSnapshot = () => {
     if (!pendingResume) return;
     sfx.click();
@@ -271,7 +287,24 @@ export default function BattlePage({ raidRoomCode = null }) {
       const t = setTimeout(() => speak(challenge.passage || challenge.answer), 500);
       return () => { clearTimeout(t); stopSpeaking(); };
     }
+    if (challenge.type === "passage_study") {
+      const chunks = challenge.chunks?.length ? challenge.chunks : [challenge.passage];
+      const chunk = chunks[0];
+      if (chunk) {
+        const tmr = setTimeout(() => speak(chunk), 500);
+        return () => { clearTimeout(tmr); stopSpeaking(); };
+      }
+    }
   }, [idx, challenge]);
+
+  useEffect(() => {
+    if (challenge?.type !== "passage_study" || passageChunkIdx <= 0) return undefined;
+    const chunks = challenge.chunks?.length ? challenge.chunks : [challenge.passage];
+    const chunk = chunks[Math.min(passageChunkIdx, chunks.length - 1)];
+    if (!chunk) return undefined;
+    const tmr = setTimeout(() => speak(chunk), 400);
+    return () => { clearTimeout(tmr); stopSpeaking(); };
+  }, [passageChunkIdx, challenge]);
 
   // Per-challenge countdown (typing / dictation — slash/speed_grid/rescue use own timers)
   useEffect(() => {
@@ -445,10 +478,13 @@ export default function BattlePage({ raidRoomCode = null }) {
     } catch (err) {
       const consent = isConsentRequiredError(err);
       if (consent) {
-        toast.error(consentToastMessage(consent, t), {
-          description: t("consent_required_body"),
-          action: { label: t("settings_title"), onClick: () => navigate("/settings") },
-        });
+        toast.warning(t("consent_play_without_save"), { description: t("consent_no_save_body") });
+        const localDiamonds = Math.floor(finalCorrect / 5) + (defeated ? 5 : 0);
+        if (localDiamonds > 0) {
+          addDiamonds(localDiamonds);
+          diamondsEarned = localDiamonds;
+          setDiamondsState(getDiamonds());
+        }
       } else {
         console.warn("game-session save failed", err);
       }
@@ -924,6 +960,13 @@ export default function BattlePage({ raidRoomCode = null }) {
                 </div>
               )}
 
+              {challenge.passage_visible && challenge.type !== "passage_study" && (
+                <div className="mb-4 rounded-2xl bg-emerald-500/10 border border-emerald-400/30 p-3 max-h-36 overflow-y-auto" data-testid="passage-visible-banner">
+                  <p className="text-[10px] uppercase tracking-wider text-emerald-200/70 mb-1">{t("passage_visible_label")}</p>
+                  <p className="text-sm kaiti whitespace-pre-wrap leading-relaxed text-emerald-50/95">{challenge.passage_visible}</p>
+                </div>
+              )}
+
               {challenge.type === "target_hunt" && (
                 <TargetWordHuntGame challenge={challenge} onCorrect={onCorrect} onWrong={onWrong} disabled={!!feedback} />
               )}
@@ -980,6 +1023,12 @@ export default function BattlePage({ raidRoomCode = null }) {
 
               {challenge.type === "passage_study" && (
                 <div data-testid="passage-study" className="space-y-4">
+                  {challenge.story_intro && (
+                    <div className="rounded-2xl bg-amber-500/15 border border-amber-400/35 p-4 text-left" data-testid="story-intro">
+                      <p className="text-[10px] uppercase tracking-wider text-amber-200/80 mb-2">{t("passage_study_intro_label")}</p>
+                      <p className="text-sm sm:text-base leading-relaxed text-amber-50/95">{challenge.story_intro}</p>
+                    </div>
+                  )}
                   {(() => {
                     const chunks = challenge.chunks?.length ? challenge.chunks : [challenge.passage];
                     const chunk = chunks[Math.min(passageChunkIdx, chunks.length - 1)];

@@ -97,6 +97,9 @@ export default function SettingsPage() {
     }
   };
 
+  const showPlayWithoutSaveBanner = dataConsent && !dataConsent.can_collect_learning_data
+    && dataConsent.status !== "active" && dataConsent.status !== "legacy_open";
+
   return (
     <div className="min-h-screen bg-slate-950 text-white px-4 py-8" data-testid="settings-page">
       <div className="max-w-md mx-auto">
@@ -132,6 +135,14 @@ export default function SettingsPage() {
           </div>
 
           <div className="rounded-2xl bg-white/5 border border-white/10 p-4" data-testid="avatar-picker">
+            {showPlayWithoutSaveBanner && (
+              <div
+                className="rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-100/90 mb-3"
+                data-testid="settings-consent-play-banner"
+              >
+                {t("settings_consent_play_banner")}
+              </div>
+            )}
             <div className="flex items-center justify-between mb-1">
               <div className="text-sm text-white/80">Your Avatar</div>
               {avatar && (
@@ -267,7 +278,7 @@ export default function SettingsPage() {
                 {t("consent_pending_body", { email: dataConsent.parent_email || "…" })}
               </p>
             ) : (
-              <p className="text-sm text-sky-200/80 mb-3" data-testid="consent-required">{t("consent_required_body")}</p>
+              <p className="text-sm text-sky-200/80 mb-3" data-testid="consent-required">{t("consent_no_save_body")}</p>
             )}
           </div>
 

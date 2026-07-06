@@ -6,6 +6,7 @@ import { Particles } from "@/lib/design";
 import { sfx } from "@/lib/audio";
 import { toast } from "sonner";
 import { isConsentRequiredError } from "@/lib/consentErrors";
+import { showNoSaveProgressToast } from "@/lib/consentNotice";
 import { useLang } from "@/lib/i18n";
 
 const PHASES = [
@@ -137,7 +138,7 @@ export default function TransformationPage() {
             } catch (err) {
               const consent = isConsentRequiredError(err);
               if (consent) {
-                toast.warning(t("consent_play_without_save"), { description: t("consent_required_body") });
+                showNoSaveProgressToast(t);
                 sessionStorage.removeItem("track_id");
                 trackId = null;
                 setStatusLine("Playing without saved progress…");

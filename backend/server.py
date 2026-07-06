@@ -1362,6 +1362,24 @@ Rules:
 - passed=false if keyword missing or used wrongly.
 - feedback must reference the exact keyword given, gentle, never harsh."""
 
+PASSAGE_STORY_INTRO_SYSTEM = """You write a kid-friendly 2–3 sentence intro for a primary-school passage.
+Use colloquial, playful tone (Cantonese-style 口語 for Chinese passages, simple English for English passages).
+Include a light joke or fun hook. No exam tone. Return ONLY the intro text — no JSON, no quotes."""
+
+
+async def _generate_passage_story_intro(passage: str, meanings: List[str], lang: str) -> Optional[str]:
+    if not GEMINI_ENABLED or not (passage or "").strip():
+        return None
+    try:
+        hint = (meanings[0][:120] if meanings else "")
+        prompt = f"Language: {lang}\nPassage:\n{passage[:900]}\nHint meaning: {hint}"
+        raw = await _gemini_generate(PASSAGE_STORY_INTRO_SYSTEM, prompt, timeout=8.0)
+        intro = (raw or "").strip().strip('"').strip("'")
+        return intro[:400] if intro else None
+    except Exception as e:
+        logger.debug("passage story intro gemini fallback: %s", e)
+        return None
+
 
 class GradeSentenceRequest(BaseModel):
     keyword: str
@@ -3085,7 +3103,19 @@ async def start_step_battle(
     if int(track.get("bundle_count") or 1) > 1:
         title += f" (Bundle {bundle_idx + 1}/{track.get('bundle_count')})"
 
-    game = generate_step_game(bundle_units, play_step, title, performance=performance, track_type=track_type)
+    game = generate_step_game(
+        bundle_units, play_step, title, performance=performance,
+        track_type=track_type,
+    )
+    if play_step == 1 and track_type == "recital_dictation":
+        meanings = [u.get("definition") or u.get("meaning") or "" for u in bundle_units if u.get("term")]
+        for c in game.get("challenges") or []:
+            if c.get("type") == "passage_study":
+                lang = "zh" if any(detect_language(u.get("term", "")) == "zh" for u in bundle_units) else "en"
+                ai_intro = await _generate_passage_story_intro(c.get("passage") or "", meanings, lang)
+                if ai_intro:
+                    c["story_intro"] = ai_intro
+                break
     unit_ids = [u["unit_id"] for u in bundle_units]
 
     return {
@@ -3107,6 +3137,7 @@ async def get_progress_snapshot(owner: str = Depends(get_owner_id)):
 
 @api_router.post("/progress-snapshot")
 async def save_progress_snapshot(payload: ProgressSnapshotSave, owner: str = Depends(get_owner_id)):
+    await assert_can_collect_learning_data(db, owner)
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         "owner": owner,
