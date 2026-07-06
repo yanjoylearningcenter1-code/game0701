@@ -1,0 +1,169 @@
+{
+  "theme_and_archetype": {
+    "theme": "Hybrid (Light for Dashboards/Hubs, Dark/Magical for Battle/Camera)",
+    "archetype": "Archetype 6 (Vibrant Play) merged with Mobile RPG Gaming aesthetics (Genshin / Puzzle & Dragons style)",
+    "core_emotion": "Anything can become a game. Magic, low-barrier feeling, tactile, and rewarding."
+  },
+  "typography": {
+    "heading_font": "Fredoka",
+    "body_font": "Nunito",
+    "rules": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight font-bold text-slate-900 drop-shadow-sm",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-bold text-slate-800",
+      "h3": "text-xl sm:text-2xl font-semibold",
+      "body": "text-base leading-relaxed text-slate-600",
+      "button": "text-lg font-bold tracking-wide uppercase",
+      "game_hud": "text-xl font-black text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] stroke-black stroke-2"
+    }
+  },
+  "color_system": {
+    "primary": {
+      "base": "#3B82F6",
+      "hover": "#60A5FA",
+      "active": "#2563EB",
+      "description": "Magic Blue - Used for primary actions, magic themes, and student UI."
+    },
+    "secondary": {
+      "base": "#FBBF24",
+      "hover": "#FCD34D",
+      "active": "#F59E0B",
+      "description": "Energy Gold - Used for rewards, combos, coins, and premium CTAs."
+    },
+    "accent_magic": {
+      "base": "#8B5CF6",
+      "hover": "#A78BFA",
+      "active": "#7C3AED",
+      "description": "Mystic Purple - Used for boss themes, magical transformations, and spell effects."
+    },
+    "accent_health": {
+      "base": "#10B981",
+      "hover": "#34D399",
+      "active": "#059669",
+      "description": "Nature Green - Used for player HP, correct answers, and success states."
+    },
+    "danger": {
+      "base": "#EF4444",
+      "hover": "#F87171",
+      "active": "#DC2626",
+      "description": "Boss Red - Used for boss attacks, wrong answers, and danger meters."
+    },
+    "backgrounds": {
+      "student_hub": "#F0F9FF",
+      "parent_dashboard": "#FDFBF7",
+      "battle_dark": "#0F172A"
+    },
+    "surfaces": {
+      "glass_light": "bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
+      "glass_dark": "bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)]",
+      "solid_card": "bg-white border-2 border-slate-100 shadow-sm rounded-2xl"
+    }
+  },
+  "layout_and_spacing": {
+    "spacing_scale": "p-2, p-4, p-6, p-8, p-12 (Generous spacing for dashboards, tight/dense for game UI)",
+    "game_ui_rules": "Bottom-dominant navigation, thumb-friendly action placement, layered modal screens, immersive backgrounds with floating panels.",
+    "dashboard_ui_rules": "Bento grid for analytics. grid-cols-1 md:grid-cols-3 lg:grid-cols-4. gap-6.",
+    "border_radius": "rounded-2xl or rounded-3xl for playful, tactile buttons. No sharp corners for student-facing UI."
+  },
+  "components_strategy": {
+    "buttons": "Tactile, 'bouncy' feel. Heavy drop shadows that compress on active state (translate-y-1 shadow-none).",
+    "cards": "For Study Modes: large, illustrated cards with vibrant gradients and iconography.",
+    "game_hud": "Progress bars for HP (Green) and Boss HP (Red). Combo counters that scale up in size. Draggable/Tappable word fragments.",
+    "forms": "Shadcn based but customized with rounded corners, large touch targets, and playful focus rings (ring-4 ring-blue-300)."
+  },
+  "motion_and_interactions": {
+    "hover": "Scale up (scale-105) for game elements, translate-y-1 for buttons.",
+    "active": "Scale down (scale-95) for tactile feedback.",
+    "magic_moment": "3-5s sequence: Image upload -> Blur/Glow -> Floating Runes -> Flash to World Map. Use Framer Motion orchestrations.",
+    "battle_feedback": "Screen shake on boss attack. Particle burst on correct combo.",
+    "page_transitions": "Fade and slight upward slide."
+  },
+  "icons_and_assets": {
+    "library": "lucide-react for dashboards, custom SVGs or emojis for game elements.",
+    "style": "Chunky, bold, duotone or filled icons for the game. Clean line icons for parent/teacher dashboard."
+  },
+  "media_urls": [
+    {
+      "category": "hero_background",
+      "url": "https://static.prod-images.emergentagent.com/jobs/96c2d81a-68f1-47b1-8d48-5cd97edd0fc9/images/4d1c4412c0db8eb926168ed4c837ed65609fd13aba3c6108f8361583dc6f7e50.png",
+      "description": "Fantasy floating islands landscape, magical world tree, portals. Use in Landing Page."
+    },
+    {
+      "category": "character_student",
+      "url": "https://static.prod-images.emergentagent.com/jobs/96c2d81a-68f1-47b1-8d48-5cd97edd0fc9/images/e107b7c106d7f97f7b92fe570b755516063dd742f39bda9bfdc80c5213b92569.png",
+      "description": "Student adventurer. Use in Identity Selection and Kid Home Profile."
+    },
+    {
+      "category": "character_parent",
+      "url": "https://static.prod-images.emergentagent.com/jobs/96c2d81a-68f1-47b1-8d48-5cd97edd0fc9/images/987e9a1d69803b87fa479a643b0520655a522c8361dafedb4f2a26b2e6e3001d.png",
+      "description": "Parent guardian holding shield. Use in Identity Selection."
+    },
+    {
+      "category": "character_teacher",
+      "url": "https://static.prod-images.emergentagent.com/jobs/96c2d81a-68f1-47b1-8d48-5cd97edd0fc9/images/8d82900a1847a03f1fce8b9e38d362729bd7947de1accea5aed70d1729c95e85.png",
+      "description": "Teacher mage with spellbook. Use in Identity Selection."
+    },
+    {
+      "category": "magic_camera_bg",
+      "url": "https://static.prod-images.emergentagent.com/jobs/96c2d81a-68f1-47b1-8d48-5cd97edd0fc9/images/6e359f7aeed7399df32d3f855ac94ea52eda4c4f129027368e87bbc2b194f29c.png",
+      "description": "Glowing camera interface concept. Use as background/overlay for the OCR Camera Upload magic moment."
+    },
+    {
+      "category": "boss_monster",
+      "url": "https://static.prod-images.emergentagent.com/jobs/96c2d81a-68f1-47b1-8d48-5cd97edd0fc9/images/5ebfb4090fa6c80b07c42cecf7edb828703141e03a55306d0d9ff91931ba91aa.png",
+      "description": "Cute menacing fantasy boss. Use in the Battle Game Screen."
+    },
+    {
+      "category": "world_map_bg",
+      "url": "https://static.prod-images.emergentagent.com/jobs/96c2d81a-68f1-47b1-8d48-5cd97edd0fc9/images/fb2a9fe3bdb1a067d60f4a31b84027120084335d5995788dca166ce209fd8337.png",
+      "description": "Fantasy game world map. Use as background for Kid Home World / Mission Hub."
+    }
+  ],
+  "page_structures": {
+    "landing_page": {
+      "layout": "Immersive full-screen hero.",
+      "visuals": "Hero background image with a dark gradient overlay at the bottom. Floating magic particles.",
+      "content": "Main Title: '拍下任何教材 即刻變成挑戰冒險', Subtitle: 'Homework becomes Adventure'. Big vibrant 'Start Adventure' CTA."
+    },
+    "identity_selection": {
+      "layout": "3-column grid on desktop, stacked on mobile.",
+      "visuals": "Glassmorphism cards over blurred hero background. Each card features the 3D character (Student/Parent/Teacher) with distinct magical auras."
+    },
+    "kid_home_world": {
+      "layout": "Mobile-game lobby layout. Full-screen world map background.",
+      "top_bar": "Player level, Energy, Coins.",
+      "center": "Floating islands/nodes for missions.",
+      "bottom_nav": "Thumb-friendly icons (Map, Camera/Scan, Pets, Profile)."
+    },
+    "camera_upload": {
+      "layout": "Immersive camera view.",
+      "visuals": "Use magic_camera_bg as overlay. Glowing edge scanner. Multi-upload up to 3 files. Magic Moment animation uses Framer Motion to dissolve worksheet into glowing runes."
+    },
+    "study_mode_selection": {
+      "layout": "Horizontal scrolling cards or 2x2 grid.",
+      "modes": "讀默 Memory Mist Battle, 背默 Expedition Trial, Quiz Lightning Challenge, Exam Ultimate Trial."
+    },
+    "battle_game_screen": {
+      "layout": "Puzzle & Dragons vertical slice.",
+      "top": "Boss Monster image + Boss HP Bar (Red) + Danger meter.",
+      "middle": "Puzzle Field (vocab tiles, word fragments, tap/drag interactions).",
+      "bottom": "Player HP (Green) + Skill Energy + Combo Counter."
+    },
+    "parent_dashboard": {
+      "layout": "Warm, modern bento grid.",
+      "content": "Reassuring emotion. Child's progress as 'Hero's Journey' milestones, not just charts. Quick upload feature. Suggestions card."
+    },
+    "teacher_dashboard": {
+      "layout": "Control room grid, clean and functional with magic accents.",
+      "content": "Classroom raids setup, room codes generation, student progress matrix."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the JSON rules and color systems provided. Do NOT use default Tailwind blue unless specified.",
+    "Use 'Fredoka' for headings and 'Nunito' for body. Import from Google Fonts.",
+    "Student-facing UI must look like a mobile game (Genshin/P&D style) using the provided immersive background URLs and characters. Do not use generic SaaS layouts for the Kid views.",
+    "Use framer-motion heavily for the game screens: button bounces, combo popups, and the AI transformation magic moment (worksheet to runes).",
+    "Parent/Teacher dashboards should use Shadcn components but themed warmly (rounded corners, soft shadows).",
+    "All interactive elements MUST have data-testid attributes for testing.",
+    "Do NOT use placeholder images. Use ONLY the URLs provided in the media_urls section."
+  ]
+}

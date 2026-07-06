@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 4 — pure code-quality regression pass. All 29 backend pytest tests pass (11 test_backend + 11 test_new_features + 7 new test_iter4_regression). Full frontend student flow verified: Upload -> Preview -> Mode -> Battle -> tap-option click. Confirmed: (a) BattlePage tap-options render 4 distinct options and clicking tap-option-0 correctly deals damage (Boss HP 100->85, Score 0->150, Hits 0/0->1/1, Combo x0->x1) proving the new opt-as-key change does NOT break handleTap/indexOf-based data-testid resolution; (b) POST /api/reviews fires on tap (network captured) and the new .catch(err=>console.warn) doesn't interfere with happy path; (c) auto-advance to challenge 2/8 works (memory/reconstruction mode also renders with new key strategy); (d) KidHome /home shows energy-panel (100/100), boss-resting-card, all 5 region tiles (forest+plain unlocked once track exists, others locked); (e) /parent, /teacher, /free-play render cleanly (no React key warnings, no console errors beyond expected /api/auth/me 401 for guest); (f) OCR language toggle (ocr-lang-auto/eng/zh) still renders. Iteration 4 code-quality edits are safe — zero regressions detected.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_backend.py",
+    "/app/backend/tests/test_new_features.py",
+    "/app/backend/tests/test_iter4_regression.py",
+    "/app/test_reports/pytest/pytest_iter4.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "AuthContext auth/me 401 warnings now correctly log via console.warn (per iteration 4 fix). This IS the intended improvement — noisy but visible. Consider gating the /api/auth/me call behind a session-cookie presence check to eliminate ~4 console warnings on every guest page load; this is a UX polish, not a bug.",
+    "tap-option React key = option text works today because current LLM output never returns two options with identical text within one challenge. If Gemini ever emits duplicate options (unlikely but possible for very short answers like True/False), React will warn about duplicate keys. Safer key: `${challenge_index}-${opt_index}-${opt.substring(0,8)}` or just retain a stable option_id from the backend. Not blocking for iter 4 since no duplicate options observed in real payloads.",
+    "Pre-existing (still not addressed since iter 1): /api/auth/me is unconditionally called for guests, producing 2-4 401 console errors per page mount. Gate behind cookie presence."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter4_regression.py (new — 7 regression tests for endpoints touched by code-quality fixes)"
+  ],
+  "success_rate": {"backend": "100% (29/29 tests)", "frontend": "100% (all critical flows validated: home, upload, preview, mode, battle w/ tap-option state changes, parent, teacher, free-play routes)"},
+  "test_credentials": "Guest mode via X-Guest-Id header (see /app/memory/test_credentials.md).",
+  "seed_data_creation": "In-test guest sessions created ephemeral tracks/materials/game-sessions using TEST_ prefix. No teardown (guest data auto-isolated).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 4 code-quality fixes are all verified safe. Test suites (test_backend.py, test_new_features.py, test_iter4_regression.py) form a solid regression net for the AI Cognitive Adventure Platform. If next iteration touches BattlePage further, spot-check: (1) tap-option-0..3 data-testids still resolve, (2) POST /api/reviews still fires per correct answer, (3) auto-advance to next challenge works. To run: `REACT_APP_BACKEND_URL=https://hero-learning-3.preview.emergentagent.com python -m pytest backend/tests/ -v` (~2 min).",
+  "rca of the issue": "N/A — no bugs found. Iteration 4 was a code-quality pass (type annotations, empty-catch logging, React key stability, useEffect dep list, unused variable removal, JSX apostrophe escapes). All ~10 minor edits verified non-breaking via 29 backend tests + full student flow UI regression."
+}

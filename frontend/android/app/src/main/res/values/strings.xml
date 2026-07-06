@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Learning Journey</string>
+    <string name="title_activity_main">Learning Journey</string>
+    <string name="package_name">com.learningjourney.app</string>
+    <string name="custom_url_scheme">com.learningjourney.app</string>
+</resources>

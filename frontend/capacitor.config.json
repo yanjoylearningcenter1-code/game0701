@@ -1,0 +1,23 @@
+{
+  "appId": "com.cramjourney.app",
+  "appName": "Cram Journey",
+  "webDir": "build",
+  "backgroundColor": "#020617",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "Camera": {
+      "androidScaleType": "FIT_CENTER"
+    }
+  }
+}
