@@ -1,7 +1,23 @@
 import axios from "axios";
 import { shouldSendKidModeHeader } from "@/lib/kidMode";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
+/** Production fallback when REACT_APP_BACKEND_URL was not set at Vercel build time. */
+const PRODUCTION_API = "https://game0701.onrender.com";
+
+function resolveBackendUrl() {
+  if (process.env.REACT_APP_BACKEND_URL) {
+    return process.env.REACT_APP_BACKEND_URL.replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host !== "localhost" && host !== "127.0.0.1") {
+      return PRODUCTION_API;
+    }
+  }
+  return "http://127.0.0.1:8000";
+}
+
+const BACKEND_URL = resolveBackendUrl();
 export { BACKEND_URL };
 export const API = `${BACKEND_URL}/api`;
 

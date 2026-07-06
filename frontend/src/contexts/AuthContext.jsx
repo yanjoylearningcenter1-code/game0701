@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
   // invalid cookie just comes back as 401, which we treat as logged out.
   const refresh = useCallback(async () => {
     try {
-      const r = await api.get("/auth/me");
+      const r = await api.get("/auth/me", { timeout: 8000 });
       setUser(r.data);
     } catch (err) {
       setUser(null);

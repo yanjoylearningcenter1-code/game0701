@@ -14,7 +14,7 @@ import { enableKidMode } from "@/lib/kidMode";
 import { useLang } from "@/lib/i18n";
 import { loadBattleSnapshot, continueBattleFromUpload, clearBattleSnapshot } from "@/lib/battleSnapshot";
 import { KidPageShell } from "@/components/KidBottomNav";
-import api from "@/lib/api";
+import api, { BACKEND_URL } from "@/lib/api";
 
 const UPLOAD_LANG_KEYS = ["auto", "eng", "zh_trad", "zh_simp"];
 const DEFAULT_MAX_FILES = 3;
@@ -297,7 +297,7 @@ export default function UploadPage() {
       console.error(e);
       const msg = String(e?.message || e);
       if (msg.includes("NETWORK") || msg.includes("Network") || msg.includes("fetch")) {
-        toast.error("Can't reach backend — is it running on port 8000? You can still paste text manually below.");
+        toast.error(`Can't reach backend (${BACKEND_URL}). You can still paste text manually below.`);
       } else {
         toast.error("OCR failed. Try English-only mode, clearer photos, or type text manually.");
       }

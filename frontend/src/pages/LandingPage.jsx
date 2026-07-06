@@ -12,19 +12,16 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { t } = useLang();
 
-  const start = async () => {
+  const start = () => {
     unlockAudio();
     sfx.click();
     enableKidMode();
     sessionStorage.removeItem("assign_flow");
     sessionStorage.removeItem("assign_student_id");
     sessionStorage.removeItem("auth_role");
-    try {
-      await api.post("/auth/logout");
-    } catch {
-      /* parent session may not exist */
-    }
     navigate("/upload");
+    // Clear any parent session without blocking kid flow (logout can be slow on cold Render).
+    api.post("/auth/logout", null, { timeout: 4000 }).catch(() => {});
   };
 
   const openFamilyTeacherArea = () => {

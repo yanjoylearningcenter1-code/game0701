@@ -4466,7 +4466,12 @@ async def update_raid_progress(
 # ============== ROOT ==============
 @api_router.get("/")
 async def root():
-    return {"message": "AI Cognitive Adventure Platform API", "ok": True}
+    dev_on = os.environ.get("DEV_AUTH_ENABLED", "").lower() == "true"
+    return {
+        "message": "AI Cognitive Adventure Platform API",
+        "ok": True,
+        "dev_auth_enabled": dev_on,
+    }
 
 
 @app.on_event("startup")
@@ -4520,10 +4525,15 @@ async def classroom_websocket(websocket: WebSocket, room_code: str):
 
 def _cors_origins() -> list[str]:
     raw = os.environ.get("CORS_ORIGINS", "*").strip()
+    origins: list[str] = []
     if raw in ("", "*"):
-        # Browsers reject credentialed requests when Allow-Origin is * — use dev defaults.
-        return ["http://localhost:3000", "http://127.0.0.1:3000"]
-    return [o.strip() for o in raw.split(",") if o.strip()]
+        origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    else:
+        origins = [o.strip() for o in raw.split(",") if o.strip()]
+    app_base = os.environ.get("APP_BASE_URL", "").strip().rstrip("/")
+    if app_base and app_base not in origins:
+        origins.append(app_base)
+    return origins
 
 
 app.add_middleware(

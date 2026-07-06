@@ -8,7 +8,7 @@ import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-const DEV_AUTH = process.env.REACT_APP_DEV_AUTH === "true";
+const DEV_AUTH_ENV = process.env.REACT_APP_DEV_AUTH === "true";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -17,6 +17,14 @@ export default function LoginPage() {
   const [devEmail, setDevEmail] = useState("teacher@test.local");
   const [loading, setLoading] = useState(false);
   const [agreedPrivacy, setAgreedPrivacy] = useState(false);
+  const [devAuthAvailable, setDevAuthAvailable] = useState(DEV_AUTH_ENV);
+
+  useEffect(() => {
+    if (DEV_AUTH_ENV || isFirebaseConfigured()) return;
+    api.get("/", { timeout: 8000 })
+      .then((r) => setDevAuthAvailable(Boolean(r.data?.dev_auth_enabled)))
+      .catch(() => setDevAuthAvailable(false));
+  }, []);
 
   const finishLogin = (user) => {
     const dest = user.role === "teacher" ? "/teacher" : "/parent";
@@ -101,7 +109,7 @@ export default function LoginPage() {
             >
               Continue with Google
             </Button>
-          ) : DEV_AUTH ? (
+          ) : devAuthAvailable ? (
             <div className="space-y-3">
               <Input
                 data-testid="dev-email-input"
@@ -121,7 +129,9 @@ export default function LoginPage() {
               <p className="text-xs text-sky-200/50">Local dev mode — set REACT_APP_FIREBASE_CONFIG for production Google login</p>
             </div>
           ) : (
-            <p className="text-amber-200 text-sm">Configure Firebase (REACT_APP_FIREBASE_CONFIG) or enable dev auth.</p>
+            <p className="text-amber-200 text-sm">
+              Configure Firebase (REACT_APP_FIREBASE_CONFIG) on Vercel, or set DEV_AUTH_ENABLED=true on Render for staging login.
+            </p>
           )}
 
           <button
