@@ -1030,7 +1030,7 @@ const DICT = {
     logic_peek_answer: "📖 查看答案",
     word_detective_component: "🔎 選出缺漏的部件",
     slash_hint: "切中 {n} 個正確字詞 · 滑過會閃走",
-    target_hunt_title: "🎯 搵字目標",
+    target_hunt_title: "🎯 尋字目標",
     target_hunt_progress: "找出所有「{word}」 · 點一下即可讀出 ({found}/{total})",
     flip_label_memory: "🃏 記憶配對",
     flip_label_synonym: "🔗 同義配對",
