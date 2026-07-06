@@ -4487,13 +4487,24 @@ async def _warm_mongo():
 async def health():
     """Quick readiness check — frontend can surface a useful error when Mongo is down."""
     mongo_ok = False
+    mongo_error = None
+    mongo_host = None
+    raw_url = os.environ.get("MONGO_URL", "").strip()
+    if raw_url:
+        if "@" in raw_url:
+            mongo_host = raw_url.split("@", 1)[1].split("/")[0].split("?")[0]
+        else:
+            mongo_host = "missing-user-or-password-in-url"
+    else:
+        mongo_error = "MONGO_URL is empty on Render"
     try:
-        # Atlas first ping can exceed 2s; 5s keeps local dev responsive without false negatives.
-        await asyncio.wait_for(db.command("ping"), timeout=5.0)
+        # Atlas first ping can exceed 2s; 8s avoids false negatives on cold Atlas.
+        await asyncio.wait_for(db.command("ping"), timeout=8.0)
         mongo_ok = True
-    except Exception:
-        pass
-    return {
+        mongo_error = None
+    except Exception as exc:
+        mongo_error = str(exc)[:240]
+    payload = {
         "ok": mongo_ok,
         "mongo": mongo_ok,
         "gemini": GEMINI_ENABLED,
@@ -4501,7 +4512,13 @@ async def health():
         "resend": bool(os.environ.get("RESEND_API_KEY", "")) and not str(os.environ.get("RESEND_API_KEY", "")).startswith("PASTE"),
         "firebase": bool(os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON", "")),
         "message": "ready" if mongo_ok else "MongoDB unreachable — start mongod or check MONGO_URL",
+        "db_name": os.environ.get("DB_NAME", ""),
     }
+    if mongo_host:
+        payload["mongo_host"] = mongo_host
+    if mongo_error and not mongo_ok:
+        payload["mongo_error"] = mongo_error
+    return payload
 
 
 register_teacher_billing_routes(api_router, db, get_current_user)
