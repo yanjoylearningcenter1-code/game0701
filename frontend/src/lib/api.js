@@ -21,6 +21,37 @@ const BACKEND_URL = resolveBackendUrl();
 export { BACKEND_URL };
 export const API = `${BACKEND_URL}/api`;
 
+/** Mobile / Capacitor WebViews often hit Render cold starts on slower networks. */
+export function isLikelyMobileClient() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod|Android|Mobile/i.test(ua)) return true;
+  try {
+    if (window.Capacitor?.isNativePlatform?.()) return true;
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
+export function apiTimeoutMs(preferred = 60000) {
+  return isLikelyMobileClient() ? Math.max(preferred, 90000) : preferred;
+}
+
+let warmPromise = null;
+
+/** Wake Render free tier before OCR upload (no-op if already warm). */
+export function warmBackend() {
+  if (warmPromise) return warmPromise;
+  warmPromise = axios
+    .get(`${API}/health`, { timeout: apiTimeoutMs(35000), withCredentials: true })
+    .catch(() => null)
+    .finally(() => {
+      setTimeout(() => { warmPromise = null; }, 30000);
+    });
+  return warmPromise;
+}
+
 // Per-device kid identity (kid_device_id). Persists in localStorage across sessions.
 // Legacy key guest_id is migrated on first read.
 export function getKidDeviceId() {
@@ -46,7 +77,7 @@ export function getGuestId() {
 const api = axios.create({
   baseURL: API,
   withCredentials: true,
-  timeout: 60000,
+  timeout: apiTimeoutMs(60000),
 });
 
 api.interceptors.request.use((config) => {

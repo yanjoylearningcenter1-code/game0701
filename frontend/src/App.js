@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { initPushNotifications } from "@/lib/push";
 import { setPushNavigator } from "@/lib/pushRouter";
+import { warmBackend } from "@/lib/api";
 
 import LandingPage from "@/pages/LandingPage";
 import IdentitySelectionPage from "@/pages/IdentitySelectionPage";
@@ -40,6 +41,7 @@ function PushBootstrap() {
   useEffect(() => {
     setPushNavigator(navigate);
     initPushNotifications();
+    warmBackend();
   }, [navigate]);
   return null;
 }

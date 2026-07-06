@@ -1,6 +1,6 @@
 // OCR: hybrid server (Vision → Gemini) when keys set, else Tesseract.js fallback.
 import { createWorker } from "tesseract.js";
-import api from "@/lib/api";
+import api, { apiTimeoutMs, isLikelyMobileClient, warmBackend } from "@/lib/api";
 
 export const OCR_LANGS = {
   auto: { code: "eng+chi_tra", label: "Auto 中英", short: "Auto" },
@@ -15,13 +15,6 @@ const workerCache = new Map();
 async function loadImageToCanvas(file, maxLongSide = 2400, { grayscale = true } = {}) {
   let bitmap;
   try {
-    // "from-image" makes the browser respect EXIF orientation (many phone
-    // cameras store the photo pixels landscape + a "rotate 90°" tag rather
-    // than physically rotating them — without this, a portrait worksheet
-    // photo can come out sideways/upside-down before OCR ever sees it,
-    // which scrambles Vision/Gemini's reading-order reconstruction far more
-    // for left-to-right English text than for individually-parsed Chinese
-    // characters).
     bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch {
     try {
@@ -58,11 +51,6 @@ async function loadImageToCanvas(file, maxLongSide = 2400, { grayscale = true } 
   ctx.drawImage(bitmap, 0, 0, w, h);
 
   if (grayscale) {
-    // Aggressive grayscale/contrast stretch — tuned for Tesseract, which does
-    // much better on high-contrast B&W input. Vision/Gemini are full AI
-    // vision models that read color photos natively and don't need (and can
-    // be hurt by) this destructive preprocessing, so server-bound requests
-    // skip it (see preprocessForServer below).
     const img = ctx.getImageData(0, 0, w, h);
     const d = img.data;
     for (let i = 0; i < d.length; i += 4) {
@@ -79,13 +67,13 @@ export async function preprocessImage(file, maxLongSide = 2400) {
   return loadImageToCanvas(file, maxLongSide, { grayscale: true });
 }
 
-/** Lighter, color-preserving preprocessing for server AI OCR (Vision/Gemini) —
- * just orientation-correct + resize, no destructive grayscale/contrast stretch. */
-export async function preprocessForServer(file, maxLongSide = 2800) {
-  return loadImageToCanvas(file, maxLongSide, { grayscale: false });
+export async function preprocessForServer(file, maxLongSide) {
+  const side = maxLongSide ?? (isLikelyMobileClient() ? 2000 : 2800);
+  return loadImageToCanvas(file, side, { grayscale: false });
 }
 
 export function canvasToJpegBase64(canvas, quality = 0.9) {
+  const q = isLikelyMobileClient() ? Math.min(quality, 0.82) : quality;
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
@@ -99,7 +87,7 @@ export function canvasToJpegBase64(canvas, quality = 0.9) {
         reader.readAsDataURL(blob);
       },
       "image/jpeg",
-      quality,
+      q,
     );
   });
 }
@@ -148,6 +136,20 @@ export async function recognizeTesseract(canvas, langKey, onProgress) {
   return best;
 }
 
+async function getWithRetry(url, opts = {}, retries = 1) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await api.get(url, opts);
+    } catch (err) {
+      lastErr = err;
+      if (err.response || attempt >= retries) break;
+      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 /** Server hybrid OCR (Vision → Gemini). Respects quota unless parent BYOK key set. */
 export async function recognizeWithServer(canvas, langKey, onProgress, engine = "auto") {
   onProgress?.(0.05);
@@ -156,7 +158,7 @@ export async function recognizeWithServer(canvas, langKey, onProgress, engine = 
   const r = await api.post(
     "/ocr",
     { image_base64: dataUrl, lang_hint: langKey, engine },
-    { timeout: 45000 },
+    { timeout: apiTimeoutMs(45000) },
   );
   onProgress?.(1);
   return {
@@ -168,41 +170,53 @@ export async function recognizeWithServer(canvas, langKey, onProgress, engine = 
 }
 
 export async function fetchOcrQuota() {
-  const r = await api.get("/ocr/quota");
+  const r = await api.get("/ocr/quota", { timeout: apiTimeoutMs(15000) });
   return r.data;
 }
 
 /**
  * Smart OCR: server hybrid when available, else Tesseract.
- * Handles 402 quota / 429 rate limit with graceful fallback.
+ * Network/cold-start failures fall back to on-device OCR (never hard-fail upload).
  */
 export async function recognizeSmart(file, langKey = "auto", onProgress) {
   let quotaExceeded = false;
   let rateLimited = false;
+  let serverUnreachable = false;
+
+  await warmBackend();
 
   try {
-    const caps = await api.get("/ocr/capabilities", { timeout: 5000 });
+    const caps = await getWithRetry(
+      "/ocr/capabilities",
+      { timeout: apiTimeoutMs(12000) },
+      isLikelyMobileClient() ? 2 : 1,
+    );
     const hasByok = Boolean(localStorage.getItem("parent_gemini_key"));
     if (caps.data?.gemini || caps.data?.vision || hasByok) {
       onProgress?.(0.02);
       const serverCanvas = await preprocessForServer(file);
-      const server = await recognizeWithServer(serverCanvas, langKey, onProgress, "auto");
-      if (server.text && !server.garbled) return server;
-      if (server.text) return { ...server, garbled: true };
+      try {
+        const server = await recognizeWithServer(serverCanvas, langKey, onProgress, "auto");
+        if (server.text && !server.garbled) return server;
+        if (server.text) return { ...server, garbled: true };
+      } catch (err) {
+        const status = err.response?.status;
+        if (status === 402) quotaExceeded = true;
+        else if (status === 429) rateLimited = true;
+        else if (!err.response) serverUnreachable = true;
+        else if (status === 502 || status === 504 || status === 503) serverUnreachable = true;
+        console.warn("Server OCR failed, trying on-device OCR", err);
+      }
     }
   } catch (err) {
     const status = err.response?.status;
-    const detail = err.response?.data?.detail;
     if (status === 402) {
       quotaExceeded = true;
     } else if (status === 429) {
       rateLimited = true;
-    } else if (status === 503) {
-      // No API keys — fall through to Tesseract
-    } else if (status === 502 || status === 504) {
-      console.warn("Server OCR failed, trying basic OCR", err);
-    } else if (!err.response) {
-      throw new Error("NETWORK");
+    } else if (!err.response || status === 502 || status === 504 || status === 503) {
+      serverUnreachable = true;
+      console.warn("Backend unreachable for OCR — using on-device OCR", err);
     }
   }
 
@@ -215,6 +229,7 @@ export async function recognizeSmart(file, langKey = "auto", onProgress) {
     garbled: looksGarbled(text),
     quotaExceeded,
     rateLimited,
+    serverUnreachable,
   };
 }
 

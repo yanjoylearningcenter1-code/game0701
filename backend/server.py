@@ -4577,10 +4577,20 @@ def _cors_origins() -> list[str]:
     if raw in ("", "*"):
         origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
     else:
-        origins = [o.strip() for o in raw.split(",") if o.strip()]
+        origins = [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
     app_base = os.environ.get("APP_BASE_URL", "").strip().rstrip("/")
     if app_base and app_base not in origins:
         origins.append(app_base)
+    # Mobile browser + Capacitor WebView origins (no profile data required)
+    for extra in (
+        "https://game0701.vercel.app",
+        "https://localhost",
+        "http://localhost",
+        "capacitor://localhost",
+        "ionic://localhost",
+    ):
+        if extra not in origins:
+            origins.append(extra)
     return origins
 
 
