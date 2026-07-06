@@ -5,7 +5,7 @@ import api from "@/lib/api";
 import { Particles } from "@/lib/design";
 import { sfx } from "@/lib/audio";
 import { toast } from "sonner";
-import { isConsentRequiredError, consentToastMessage } from "@/lib/consentErrors";
+import { isConsentRequiredError } from "@/lib/consentErrors";
 import { useLang } from "@/lib/i18n";
 
 const PHASES = [
@@ -137,15 +137,16 @@ export default function TransformationPage() {
             } catch (err) {
               const consent = isConsentRequiredError(err);
               if (consent) {
-                clearInterval(tick);
-                toast.error(consentToastMessage(consent, t), { description: t("consent_required_body") });
-                navigate("/settings", { replace: true });
-                return;
+                toast.warning(t("consent_play_without_save"), { description: t("consent_required_body") });
+                sessionStorage.removeItem("track_id");
+                trackId = null;
+                setStatusLine("Playing without saved progress…");
+              } else {
+                console.warn("track create failed, continuing without track", err);
+                sessionStorage.removeItem("track_id");
+                trackId = null;
+                setStatusLine("Track save skipped — building battle anyway…");
               }
-              console.warn("track create failed, continuing without track", err);
-              sessionStorage.removeItem("track_id");
-              trackId = null;
-              setStatusLine("Track save skipped — building battle anyway…");
             }
           }
 

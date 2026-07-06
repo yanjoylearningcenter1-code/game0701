@@ -154,6 +154,31 @@ export default function PreviewPage() {
           </div>
         )}
 
+        <div className="mt-6 space-y-4">
+          <div>
+            <label className="text-sm text-sky-100/70">{t("preview_title_label")}</label>
+            <Input
+              data-testid="material-title-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="mt-2 bg-white/10 border-white/20 text-white rounded-2xl py-6"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-sky-100/70">{t("preview_text_label", { count: text.length })}</label>
+            <Textarea
+              data-testid="ocr-text-area"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (!isManualText) setGarbled(looksGarbled(e.target.value));
+                setSegmentCount(null);
+              }}
+              className="mt-2 bg-white/10 border-white/20 text-white rounded-2xl min-h-[260px] font-mono text-sm leading-relaxed"
+            />
+          </div>
+        </div>
+
         <div className="mt-6 rounded-2xl bg-indigo-500/10 border border-indigo-400/25 p-4" data-testid="content-structure-panel">
           <div className="text-sm font-bold text-indigo-100 mb-3">{t("preview_structure_label")}</div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -180,32 +205,7 @@ export default function PreviewPage() {
           )}
         </div>
 
-        <div className="mt-6 space-y-4">
-          <div>
-            <label className="text-sm text-sky-100/70">{t("preview_title_label")}</label>
-            <Input
-              data-testid="material-title-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="mt-2 bg-white/10 border-white/20 text-white rounded-2xl py-6"
-            />
-          </div>
-          <div>
-            <label className="text-sm text-sky-100/70">{t("preview_text_label", { count: text.length })}</label>
-            <Textarea
-              data-testid="ocr-text-area"
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                if (!isManualText) setGarbled(looksGarbled(e.target.value));
-                setSegmentCount(null);
-              }}
-              className="mt-2 bg-white/10 border-white/20 text-white rounded-2xl min-h-[260px] font-mono text-sm leading-relaxed"
-            />
-          </div>
-        </div>
-
-        {(analyzing || concepts.length > 0 || languageSplit?.mixed) && (
+        {text.trim().length >= 20 && (
           <div className="mt-6 rounded-3xl bg-indigo-500/10 border border-indigo-400/30 p-5" data-testid="key-concepts-panel">
             <div className="flex items-center justify-between gap-3 mb-3">
               <h2 className="font-display text-lg font-bold">🔑 {t("preview_key_concepts")}</h2>
