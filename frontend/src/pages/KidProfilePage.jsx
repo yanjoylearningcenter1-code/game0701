@@ -6,7 +6,7 @@ import { Particles } from "@/lib/design";
 import { KidPageShell } from "@/components/KidBottomNav";
 import { Button } from "@/components/ui/button";
 import { sfx } from "@/lib/audio";
-import { useLang } from "@/lib/i18n";
+import { useLang, badgeLabel, badgeDesc } from "@/lib/i18n";
 
 const SKILL_TREE = [
   { id: "memory", emoji: "🧠", stat: "memory", nameKey: "skill_memory" },
@@ -194,8 +194,8 @@ export default function KidProfilePage() {
                 >
                   <span className="text-2xl">{a.emoji}</span>
                   <div>
-                    <div className="font-bold text-sm">{a.name || a.title}</div>
-                    <div className="text-xs text-white/50">{a.desc}</div>
+                    <div className="font-bold text-sm">{badgeLabel(t, a.badge_id || a.id) || a.name}</div>
+                    <div className="text-xs text-white/50">{badgeDesc(t, a.badge_id || a.id) || a.desc}</div>
                   </div>
                   {(a.owned ?? a.done) && <span className="ml-auto text-amber-300 text-xs font-bold">✓</span>}
                 </div>

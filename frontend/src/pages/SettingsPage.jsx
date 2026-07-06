@@ -87,9 +87,18 @@ export default function SettingsPage() {
     if (!parentEmail.trim()) return;
     setBusy(true);
     try {
-      await api.post("/family-links/invite", { parent_email: parentEmail.trim() });
+      const { data } = await api.post("/family-links/invite", { parent_email: parentEmail.trim() });
+      if (data?.email_sent === false) {
+        if (data?.dev_confirm_url) {
+          window.prompt(t("settings_invite_dev_link"), data.dev_confirm_url);
+        } else {
+          toast.error(t("settings_invite_fail_no_email"));
+          return;
+        }
+      } else {
+        toast.success(t("settings_invite_sent"));
+      }
       setSent(true);
-      toast.success(t("settings_invite_sent"));
     } catch (err) {
       toast.error(err.response?.data?.detail || t("settings_invite_fail"));
     } finally {
@@ -292,7 +301,7 @@ export default function SettingsPage() {
               <>
                 <Input
                   type="email"
-                  placeholder="Parent's email"
+                  placeholder={t("settings_invite_email_placeholder")}
                   value={parentEmail}
                   onChange={(e) => setParentEmail(e.target.value)}
                   className="rounded-xl bg-white/10 border-white/20 text-white mb-3"
@@ -305,7 +314,7 @@ export default function SettingsPage() {
                   className="w-full rounded-xl border-white/20 text-white hover:bg-white/10"
                   data-testid="invite-parent-btn"
                 >
-                  Send invite email
+                  {t("settings_invite_send")}
                 </Button>
               </>
             )}

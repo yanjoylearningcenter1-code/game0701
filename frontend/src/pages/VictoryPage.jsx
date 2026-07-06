@@ -8,17 +8,7 @@ import { resetPlaySession } from "@/lib/playtime";
 import { buildVictoryShareText, buildBossCardShareText, shareText } from "@/lib/share";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { useLang } from "@/lib/i18n";
-
-const BADGE_LABELS = {
-  rookie: "見習特工",
-  streak_7: "七日特工",
-  combo_5: "連擊高手",
-  logic_master: "邏輯大師",
-  eagle_eye: "鷹眼偵探",
-  speed_demon: "拆彈專家",
-  legend: "傳說特工",
-};
+import { useLang, badgeLabel } from "@/lib/i18n";
 
 export default function VictoryPage() {
   const navigate = useNavigate();
@@ -215,7 +205,7 @@ export default function VictoryPage() {
 
         {result.newBadges?.length > 0 && (
           <div className="mb-5 rounded-2xl bg-violet-500/15 border border-violet-400/30 py-2 px-3 text-sm">
-            🎖 {result.newBadges.map((id) => BADGE_LABELS[id] || id).join(" · ")}
+            🎖 {result.newBadges.map((id) => badgeLabel(t, id)).join(" · ")}
           </div>
         )}
 

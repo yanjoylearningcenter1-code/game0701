@@ -22,7 +22,7 @@ import httpx
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-from email_service import send_consent_email, send_progress_digest
+from email_service import send_consent_email, send_family_link_invite_email, send_progress_digest
 from firebase_auth import verify_firebase_id_token, firebase_configured
 from classroom_live import classroom_manager
 from ocr_service import (
@@ -3946,8 +3946,22 @@ async def invite_family_link(
     await db.consent_records.insert_one(rdoc)
 
     confirm_url = f"{os.environ.get('APP_BASE_URL', 'http://localhost:3000')}/consent/confirm?token={token}"
-    await _send_consent_email(email, confirm_url, "data_collection")
-    return {"ok": True, "status": "pending", "message": "Invite sent — waiting for parent email confirmation"}
+    email_sent = await send_family_link_invite_email(email, confirm_url)
+    dev_enabled = os.environ.get("DEV_AUTH_ENABLED", "").lower() in ("1", "true", "yes")
+    if not email_sent:
+        if dev_enabled:
+            return {
+                "ok": True,
+                "status": "pending",
+                "email_sent": False,
+                "dev_confirm_url": confirm_url,
+                "message": "Email not configured — use dev_confirm_url to test parent confirmation",
+            }
+        raise HTTPException(
+            status_code=503,
+            detail="Email service is not configured. Set RESEND_API_KEY and a verified FROM_EMAIL on the server.",
+        )
+    return {"ok": True, "status": "pending", "email_sent": True, "message": "Invite sent — waiting for parent email confirmation"}
 
 
 @api_router.post("/family-links")
