@@ -1,6 +1,6 @@
 {
-  "appId": "com.cramjourney.app",
-  "appName": "Cram Journey",
+  "appId": "com.yanjoy.joyrecall",
+  "appName": "JoyRecall",
   "webDir": "build",
   "backgroundColor": "#020617",
   "android": {

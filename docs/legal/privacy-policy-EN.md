@@ -1,4 +1,4 @@
-# Cram Journey — Privacy Policy (English — authoritative draft)
+# JoyRecall (想記) — Privacy Policy (English — authoritative draft)
 
 **[EDITOR NOTE — REMOVE BEFORE PUBLISH]**
 This draft assumes the following are true at launch:
@@ -13,7 +13,7 @@ If any item is not true, do not publish — this document would promise mechanis
 
 Effective date: [FILL IN — recommend at least 7 days before opening registration]
 
-This Privacy Policy applies to the Cram Journey mobile and web application (the "App"), operated by Yan Joy Learning Platform Limited ("we", "us") with principal place of business in Hong Kong SAR.
+This Privacy Policy applies to **JoyRecall** (想記), the mobile and web learning application (the "App"), operated by Yan Joy Learning Platform Limited ("Yanjoy Learning Center", "we", "us") with principal place of business in Hong Kong SAR.
 
 If you do not agree to this policy, do not create an account or use the App.
 
@@ -23,7 +23,7 @@ We may revise this policy by posting an updated version in the App. Changes take
 
 ## 1. Who this policy covers
 
-Cram Journey is primarily used by children; accounts are created and managed by a parent or legal guardian ("Parent"). Any data relating to a child is collected only after the Parent completes the verification procedure in Section 4.
+JoyRecall is primarily used by children; accounts are created and managed by a parent or legal guardian ("Parent"). Any data relating to a child is collected only after the Parent completes the verification procedure in Section 4.
 
 If you are in Hong Kong, this policy is interpreted under the Personal Data (Privacy) Ordinance (Cap. 486). For users in the US, EU, UK, or elsewhere, we aim to follow applicable children's privacy principles (e.g. COPPA, UK Age Appropriate Design Code). *[This sentence requires qualified legal review before international launch — it is not a guarantee of compliance in any jurisdiction.]*
 

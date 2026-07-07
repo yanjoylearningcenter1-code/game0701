@@ -71,6 +71,15 @@ export default function LandingPage() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.48 }}
+          className="mt-2 text-sm text-amber-200/80 font-medium"
+        >
+          {t("landing_brand")}
+        </motion.p>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.55 }}
           className="mt-3 max-w-xl text-base text-sky-100/70"
         >

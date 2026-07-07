@@ -151,7 +151,7 @@ export default function CalendarView({ events = [], dailyLoad = [], loading = fa
 
       <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-slate-400">
         <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Standard</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Cram</span>
+        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Sprint</span>
         <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Emergency</span>
         <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500" /> Survival</span>
       </div>

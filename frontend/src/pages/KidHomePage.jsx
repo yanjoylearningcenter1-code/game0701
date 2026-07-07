@@ -205,7 +205,7 @@ export default function KidHomePage() {
 
   const handleRegionClick = (region) => {
     if (!regionsUnlocked[region.id]) {
-      toast.info(lang === "en" ? "Complete more quests to unlock this region!" : "完成更多任務才能解鎖這個地區！");
+      toast.info(t("flavor_region_locked"));
       return;
     }
     sfx.click();
@@ -214,15 +214,15 @@ export default function KidHomePage() {
     else if (region.action === "free_play") startFreePlay();
     else if (region.action === "boss") {
       if (bossStatus.ready) startBossBattle();
-      else toast.info(lang === "en" ? "No memories due right now — check back later!" : "而家未有到期記憶 — 遲啲再嚟！");
+      else toast.info(t("flavor_no_due"));
     } else if (region.action === "journey_quiz") {
-      const t = quizTracks[0];
-      if (t) navigate(`/journey/${t.track_id}`);
-      else toast.info(lang === "en" ? "Upload quiz material first!" : "請先上傳測驗教材！");
+      const tr = quizTracks[0];
+      if (tr) navigate(`/journey/${tr.track_id}`);
+      else toast.info(t("flavor_upload_quiz"));
     } else if (region.action === "journey_exam") {
-      const t = examTracks[0];
-      if (t) navigate(`/journey/${t.track_id}`);
-      else toast.info(lang === "en" ? "Upload exam material first!" : "請先上傳考試教材！");
+      const tr = examTracks[0];
+      if (tr) navigate(`/journey/${tr.track_id}`);
+      else toast.info(t("flavor_upload_exam"));
     }
   };
 
